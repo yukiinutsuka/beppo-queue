@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beppo 店員画面</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f7f4ee;
+  color: #333;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.current {
+  background: white;
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.current-number {
+  font-size: 48px;
+  font-weight: bold;
+}
+
+.call-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 25px;
+}
+
+.call-box input {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.call-box button {
+  padding: 14px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: #333;
+  color: white;
+  font-weight: bold;
+}
+
+.ticket {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.ticket.called {
+  opacity: .45;
+}
+
+.ticket-number {
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.ticket-info {
+  margin-top: 6px;
+  line-height: 1.7;
+}
+
+.error {
+  color: #b00020;
+  text-align: center;
+  margin: 15px 0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Beppo 店員画面</h1>
+
+<div class="current">
+  <div>現在呼び出し中</div>
+  <div class="current-number" id="currentNumber">0</div>
+  <div>番</div>
+</div>
+
+<div class="call-box">
+  <input
+    id="callNumber"
+    type="number"
+    min="1"
+    placeholder="呼び出す番号"
+  >
+  <button onclick="callNumber()">
+    呼び出す
+  </button>
+</div>
+
+<div id="error" class="error"></div>
+
+<h2>順番待ち一覧</h2>
+
+<div id="tickets">
+  読み込み中…
+</div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL =
+  "https://vhvrmqfwyvzzpzrlvwlc.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_BlmpLZVhTC3M9w996LHDMg_11D-Qli8";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+async function loadQueue() {
+
+  const tickets =
+    document.getElementById("tickets");
+
+  const { data, error } =
+    await supabaseClient.rpc(
+      "get_admin_queue"
+    );
+
+  if (error) {
+
+    console.error(error);
+
+    tickets.innerHTML =
+      "順番待ち情報を取得できませんでした。";
+
+    return;
+  }
+
+  const { data: current } =
+    await supabaseClient.rpc(
+      "get_queue_status"
+    );
+
+  if (current !== null) {
+    document.getElementById(
+      "currentNumber"
+    ).textContent = current;
+  }
+
+  if (!data || data.length === 0) {
+
+    tickets.innerHTML =
+      "現在、順番待ちはありません。";
+
+    return;
+  }
+
+  tickets.innerHTML = "";
+
+  data.forEach(ticket => {
+
+    const div =
+      document.createElement("div");
+
+    const called =
+      ticket.called_at !== null;
+
+    div.className =
+      "ticket" + (called ? " called" : "");
+
+    let seatText = "";
+
+    if (ticket.seat === "table") {
+      seatText = "テーブル";
+    }
+
+    if (ticket.seat === "counter") {
+      seatText = "カウンター";
+    }
+
+    if (ticket.seat === "either") {
+      seatText = "どちらでも";
+    }
+
+    div.innerHTML = `
+      <div class="ticket-number">
+        ${ticket.ticket_number}番
+      </div>
+
+      <div class="ticket-info">
+        名前：${escapeHtml(ticket.name)}<br>
+        人数：${ticket.people}名<br>
+        希望席：${seatText}
+      </div>
+    `;
+
+    tickets.appendChild(div);
+
+  });
+}
+
+async function callNumber() {
+
+  const input =
+    document.getElementById("callNumber");
+
+  const number =
+    Number(input.value);
+
+  const error =
+    document.getElementById("error");
+
+  error.textContent = "";
+
+  if (!number || number < 1) {
+
+    error.textContent =
+      "呼び出す番号を入力してください。";
+
+    return;
+  }
+
+  const { error: callError } =
+    await supabaseClient.rpc(
+      "call_number",
+      {
+        p_number: number
+      }
+    );
+
+  if (callError) {
+
+    console.error(callError);
+
+    error.textContent =
+      "呼び出しに失敗しました。";
+
+    return;
+  }
+
+  input.value = "";
+
+  await loadQueue();
+}
+
+function escapeHtml(text) {
+
+  const div =
+    document.createElement("div");
+
+  div.textContent = text;
+
+  return div.innerHTML;
+}
+
+loadQueue();
+
+setInterval(
+  loadQueue,
+  5000
+);
+
+</script>
+
+</body>
+</html>
