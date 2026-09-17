@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beppo 順番待ち</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f7f4ee;
+  color: #333;
+}
+
+.container {
+  max-width: 480px;
+  margin: auto;
+  padding: 28px 20px 40px;
+}
+
+h1 {
+  text-align: center;
+  margin: 10px 0 4px;
+  font-size: 32px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #777;
+  margin-bottom: 30px;
+}
+
+.notice {
+  background: #fff;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 22px;
+  line-height: 1.8;
+  font-size: 14px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin: 20px 0 8px;
+}
+
+input, select {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background: white;
+  font-size: 16px;
+}
+
+.seat-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.seat-buttons button {
+  flex: 1;
+  padding: 13px 5px;
+  border: 1px solid #bbb;
+  border-radius: 10px;
+  background: white;
+  font-size: 14px;
+}
+
+.seat-buttons button.selected {
+  background: #333;
+  color: white;
+  border-color: #333;
+}
+
+.issue {
+  width: 100%;
+  margin-top: 30px;
+  padding: 17px;
+  border: 0;
+  border-radius: 12px;
+  background: #333;
+  color: white;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.issue:disabled {
+  opacity: .5;
+}
+
+.status {
+  margin-top: 30px;
+  padding: 20px;
+  background: white;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.number {
+  font-size: 54px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.called {
+  font-size: 18px;
+}
+
+.error {
+  color: #b00020;
+  margin-top: 15px;
+  text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>Beppo</h1>
+  <div class="subtitle">順番待ち受付</div>
+
+  <div class="notice">
+    ・お支払いは現金のみとなります。<br>
+    ・お席は相席になる場合があります。
+  </div>
+
+  <label>お名前（カタカナ）</label>
+  <input
+    id="name"
+    type="text"
+    placeholder="例：イヌヅカ"
+    autocomplete="off"
+  >
+
+  <label>人数</label>
+  <select id="people">
+    <option value="1">1名</option>
+    <option value="2">2名</option>
+    <option value="3">3名</option>
+    <option value="4">4名</option>
+    <option value="5">5名</option>
+    <option value="6">6名</option>
+    <option value="7">7名</option>
+    <option value="8">8名</option>
+    <option value="9">9名</option>
+    <option value="10">10名</option>
+  </select>
+
+  <label>希望のお席</label>
+
+  <div class="seat-buttons">
+    <button type="button" onclick="selectSeat('table', this)">
+      テーブル
+    </button>
+
+    <button type="button" onclick="selectSeat('counter', this)">
+      カウンター
+    </button>
+
+    <button type="button" onclick="selectSeat('either', this)">
+      どちらでも
+    </button>
+  </div>
+
+  <button class="issue" id="issueButton" onclick="issueTicket()">
+    順番を取る
+  </button>
+
+  <div id="error" class="error"></div>
+
+  <div class="status">
+    <div>あなたの番号</div>
+    <div class="number" id="myNumber">---</div>
+
+    <hr>
+
+    <div class="called">
+      現在呼び出し中<br>
+      <strong id="calledNumber">0</strong>番
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL =
+  "https://vhvrmqfwyvzzpzrlvwlc.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_BlmpLZVhTC3M9w996LHDMg_11D-Qli8";
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+let selectedSeat = null;
+
+function selectSeat(seat, button) {
+
+  selectedSeat = seat;
+
+  document
+    .querySelectorAll(".seat-buttons button")
+    .forEach(b => b.classList.remove("selected"));
+
+  button.classList.add("selected");
+}
+
+async function issueTicket() {
+
+  const name =
+    document.getElementById("name").value.trim();
+
+  const people =
+    Number(document.getElementById("people").value);
+
+  const error =
+    document.getElementById("error");
+
+  error.textContent = "";
+
+  if (!name) {
+    error.textContent = "お名前を入力してください。";
+    return;
+  }
+
+  if (!selectedSeat) {
+    error.textContent = "希望のお席を選んでください。";
+    return;
+  }
+
+  const button =
+    document.getElementById("issueButton");
+
+  button.disabled = true;
+  button.textContent = "発行中…";
+
+  const { data, error: supabaseError } =
+    await supabaseClient.rpc(
+      "issue_ticket",
+      {
+        p_name: name,
+        p_people: people,
+        p_seat: selectedSeat
+      }
+    );
+
+  if (supabaseError) {
+
+    console.error(supabaseError);
+
+    error.textContent =
+      "発行できませんでした。もう一度お試しください。";
+
+    button.disabled = false;
+    button.textContent = "順番を取る";
+
+    return;
+  }
+
+  document.getElementById("myNumber").textContent =
+    data;
+
+  localStorage.setItem(
+    "beppo_ticket_number",
+    data
+  );
+
+  button.textContent = "受付完了";
+}
+
+async function updateCalledNumber() {
+
+  const { data, error } =
+    await supabaseClient.rpc(
+      "get_queue_status"
+    );
+
+  if (!error && data !== null) {
+
+    document.getElementById(
+      "calledNumber"
+    ).textContent = data;
+  }
+}
+
+function restoreTicket() {
+
+  const saved =
+    localStorage.getItem(
+      "beppo_ticket_number"
+    );
+
+  if (saved) {
+
+    document.getElementById(
+      "myNumber"
+    ).textContent = saved;
+  }
+}
+
+restoreTicket();
+updateCalledNumber();
+
+setInterval(
+  updateCalledNumber,
+  5000
+);
+
+</script>
+
+</body>
+</html>
