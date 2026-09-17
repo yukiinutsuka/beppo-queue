@@ -117,7 +117,12 @@ h1 {
     呼び出す
   </button>
 </div>
-
+<button
+  onclick="resetQueue()"
+  style="width:100%; padding:15px; margin-bottom:25px; border:0; border-radius:10px; background:#b33; color:white; font-weight:bold;"
+>
+  営業開始・番号をリセット
+</button>
 <div id="error" class="error"></div>
 
 <h2>順番待ち一覧</h2>
@@ -226,7 +231,27 @@ async function loadQueue() {
 }
 
 async function callNumber() {
+async function resetQueue() {
 
+  const ok = confirm(
+    "待ちデータをすべて削除して、番号を1番からやり直します。\n\n本当にリセットしますか？"
+  );
+
+  if (!ok) return;
+
+  const { error } =
+    await supabaseClient.rpc("reset_queue");
+
+  if (error) {
+    console.error(error);
+    alert("リセットに失敗しました。");
+    return;
+  }
+
+  alert("リセットしました。今日の番号は1番から始まります。");
+
+  await loadQueue();
+}
   const input =
     document.getElementById("callNumber");
 
