@@ -285,9 +285,12 @@ async function resetQueue() {
     await supabaseClient.rpc("reset_queue");
 
   if (error) {
-    console.error(error);
-    alert("リセットに失敗しました。");
-    return;
+  console.error(error);
+  alert(
+    "リセットに失敗しました。\n\n" +
+    error.message
+  );
+  return;
   }
 
   alert("リセットしました。今日の番号は1番から始まります。");
