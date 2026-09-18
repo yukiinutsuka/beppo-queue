@@ -128,7 +128,10 @@ input, select {
 <div class="container">
 
   <h1>Beppo</h1>
-  <div class="subtitle">順番待ち受付</div>
+  <div class="subtitle">
+  順番待ち受付<br>
+  <span>番号札を取ってお待ちください。</span>
+  </div>
 
   <div class="notice">
     ・お支払いは現金のみとなります。<br>
@@ -139,7 +142,7 @@ input, select {
   <input
     id="name"
     type="text"
-    placeholder="例：イヌヅカ"
+    placeholder="例：ヤマダ"
     autocomplete="off"
   >
 
@@ -174,7 +177,7 @@ input, select {
   </div>
 
   <button class="issue" id="issueButton" onclick="issueTicket()">
-    順番を取る
+    番号札を取る
   </button>
 
   <div id="error" class="error"></div>
