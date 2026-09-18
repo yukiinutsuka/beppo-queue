@@ -231,27 +231,7 @@ async function loadQueue() {
 }
 
 async function callNumber() {
-async function resetQueue() {
 
-  const ok = confirm(
-    "待ちデータをすべて削除して、番号を1番からやり直します。\n\n本当にリセットしますか？"
-  );
-
-  if (!ok) return;
-
-  const { error } =
-    await supabaseClient.rpc("reset_queue");
-
-  if (error) {
-    console.error(error);
-    alert("リセットに失敗しました。");
-    return;
-  }
-
-  alert("リセットしました。今日の番号は1番から始まります。");
-
-  await loadQueue();
-}
   const input =
     document.getElementById("callNumber");
 
@@ -293,7 +273,27 @@ async function resetQueue() {
 
   await loadQueue();
 }
+async function resetQueue() {
 
+  const ok = confirm(
+    "待ちデータをすべて削除して、番号を1番からやり直します。\n\n本当にリセットしますか？"
+  );
+
+  if (!ok) return;
+
+  const { error } =
+    await supabaseClient.rpc("reset_queue");
+
+  if (error) {
+    console.error(error);
+    alert("リセットに失敗しました。");
+    return;
+  }
+
+  alert("リセットしました。今日の番号は1番から始まります。");
+
+  await loadQueue();
+}
 function escapeHtml(text) {
 
   const div =
